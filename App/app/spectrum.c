@@ -84,8 +84,7 @@ static uint32_t SpectrumRangeStop = 110000000;
 #define MONITOR_SIZE 20
 
 /////////////////////////////Parameters://///////////////////////////
-static bool     Light_Mode = true;   
-static uint16_t DelayRssi = 2000;     
+static uint16_t DelayRssi = 1500;     
 static uint16_t SpectrumDelay = 0;    
 static uint16_t MaxListenTime = 0;    
 static uint32_t RangeStart = 1400000; 
@@ -93,57 +92,41 @@ static uint32_t RangeStop = 11000000;
 static uint16_t SpectrumSleepMs = 0;  
 static uint8_t  Noislvl_OFF = NoisLvl;
 static uint8_t  Noislvl_ON = NoisLvl - NoiseHysteresis;
-static uint16_t osdPopupSetting = 600;      
+static uint16_t osdPopupSetting = 200;      
 static uint16_t UOO_trigger = 15;
 static uint8_t  AUTO_KEYLOCK = AUTOLOCK_OFF;
-static uint8_t  GlitchMax = 0;             
 static bool     SoundBoost = 0;             
 static uint8_t  PttEmission = 0;            
 static bool     gMonitorScan = true;       
 static bool     LowNoise = false;       
 
 // Configuration des index du menu des paramètres
-#define PARAM_LIGHT_MODE       0
-#define PARAM_RSSI_DELAY       1
-#define PARAM_SPECTRUM_DELAY   2
-#define PARAM_MAX_LISTEN_TIME  3
-#define PARAM_RANGE_START      4
-#define PARAM_RANGE_STOP       5
-#define PARAM_SCAN_STEP        6
-#define PARAM_LISTEN_BW        7
-#define PARAM_MODULATION       8
-#define PARAM_POWER_SAVE       9
-#define PARAM_AUTO_KEYLOCK     10
-#define PARAM_NOISE_LEVEL_OFF  11
-#define PARAM_GLITCH_MAX       12
-#define PARAM_OSD_POPUP        13
-#define PARAM_RECORD_TRIGGER   14
-#define PARAM_SOUND_BOOST      15
-#define PARAM_PTT_EMISSION     16
-#define PARAM_MONITOR_SCAN     17
-#define PARAM_RESET_DEFAULT    18
+#define PARAM_SPECTRUM_DELAY    0
+#define PARAM_MAX_LISTEN_TIME   1
+#define PARAM_RANGE_START       2
+#define PARAM_RANGE_STOP        3
+#define PARAM_SCAN_STEP         4
+#define PARAM_LISTEN_BW         5
+#define PARAM_MODULATION        6
+#define PARAM_POWER_SAVE        7
+#define PARAM_AUTO_KEYLOCK      8
+#define PARAM_NOISE_LEVEL_OFF   9
+#define PARAM_OSD_POPUP         10
+#define PARAM_RECORD_TRIGGER    11
+#define PARAM_SOUND_BOOST       12
+#define PARAM_PTT_EMISSION      13
+#define PARAM_MONITOR_SCAN      14
+#define PARAM_RESET_DEFAULT     15
 
-static const uint8_t lightModeMenuMapping[] = {
-    PARAM_LIGHT_MODE,
-    PARAM_SPECTRUM_DELAY,
-    PARAM_MAX_LISTEN_TIME,
-    PARAM_RANGE_START,
-    PARAM_RANGE_STOP,
-    PARAM_SCAN_STEP
-};
-
-uint16_t GetMaxVisualRows(void) {
-    return (Light_Mode) ? 6 : 19; 
-}
+uint16_t GetMaxVisualRows(void) {return PARAM_RESET_DEFAULT+1;}
 
 ////////////////////////////////////////////////////////////////////
 
-static uint8_t IndexDelayRssi = 3;
-static const char       *DelayRssiText[]  = {".75", "1.5", "3"};
-static const uint16_t   DelayRssiValues[] = {750, 1500, 3000}; //in ms
+static uint8_t          IndexDelayRssi = 1;
+static const uint16_t   DelayRssiValues[] = {750, 1500}; //in ms
 
 static bool     Backlight_On = 1;
-uint8_t osdPopupIndex = 3;
+uint8_t osdPopupIndex = 1;
 static const int osdPopupTimes[] = {0, 200, 500, 1000, 3000, 5000};
 #ifdef ENABLE_BENCH
     static uint32_t benchTickMs = 0;      
@@ -271,7 +254,7 @@ SpectrumSettings settings = {stepsCount: STEPS_128,
                             };
 
 // 3 Band presets
-static bool bandPresets[3][MAX_BANDS] = {{0}, {0}, {0}};
+static bool bandPresets[3][MAX_BANDS_PRESETS] = {{0}, {0}, {0}};
 static uint8_t currentBandPreset = 0;  // 0-2 for presets 1-3
 
 static uint32_t currentFreq, tempFreq;
@@ -1319,12 +1302,6 @@ static void UpdateScanInfo() {
     scanInfo.rssiMin = scanInfo.rssi;
   }
 }
-static void UpdateGlitch() {
-    if (!GlitchMax) return;
-    uint8_t glitch = BK4819_GetGlitchIndicator();
-    if (glitch > GlitchMax) {gIsPeak = false;} 
-    else {gIsPeak = true;}// if glitch is too high, receiving stopped
-}
 
 static void Measure() {
     static int16_t previousRssi = 0;
@@ -1355,7 +1332,6 @@ static void Measure() {
                     if (settings.rssiTriggerLevelUp < 50) {
                         gIsPeak = true;
                         UpdateNoiseOff();
-                        UpdateGlitch();
                     }
                 }
             
@@ -1701,7 +1677,7 @@ switch(SpectrumMonitor) {
   } 
   
   
-  len = sprintf(&String[pos],"%sms %s BW%s ", DelayRssiText[IndexDelayRssi], gModulationStr[settings.modulationType],bwNames[settings.listenBw]);
+  len = sprintf(&String[pos],"%s BW%s ", gModulationStr[settings.modulationType],bwNames[settings.listenBw]);
   pos += len;
     if(isListening) {
         int16_t afcVal = BK4819_GetAFCValue();
@@ -1735,7 +1711,6 @@ static void FormatFrequency(uint32_t f, char *buf, size_t buflen) {
 static void ScanProgress_DrawGaugeLine(uint8_t line)
 {
     if (line >= 8) return; 
-    
     static uint32_t total = 0;
     static uint16_t current_index = 0;
     static uint32_t globalStepOffset = 0;
@@ -1759,6 +1734,7 @@ static void ScanProgress_DrawGaugeLine(uint8_t line)
         total = GetStepsCount();
         current_index = scanInfo.i;
     }
+    if (!isListening && total <= 200) {return;}
     const uint8_t fill_start = 4;
     const uint8_t fill_cols  = 121;
 
@@ -1772,25 +1748,28 @@ static void ScanProgress_DrawGaugeLine(uint8_t line)
 }
 
 static void DrawNums() {
-if (appMode==CHANNEL_MODE) 
-{
-  uint8_t selectedCount = 0;
-  for (uint8_t i = 0; i < validScanListCount; i++) {
-      if (settings.scanListEnabled[validScanListIndices[i]]) selectedCount++;
-  }
-  sprintf(String, "SL:%u/%u", selectedCount, validScanListCount);
-  GUI_DisplaySmallest(String, 2, Bottom_print, false, true);
-  
-  sprintf(String, "CH:%u", scanChannelsCount);
-  GUI_DisplaySmallest(String, 101, Bottom_print, false, true);
+if (appMode==CHANNEL_MODE) {
+    uint8_t selectedCount = 0;
+    if (!validScanListCount) {
+        BuildValidScanListIndices();
+    }
 
-  return;
-}
+    if (!selectedCount) {
+        for (uint8_t i = 0; i < validScanListCount; i++) {
+            if (settings.scanListEnabled[validScanListIndices[i]]) selectedCount++;
+        }
+    }
 
-if(appMode!=CHANNEL_MODE){
+    sprintf(String, "SL:%u/%u", selectedCount, validScanListCount);
+    GUI_DisplaySmallest(String, 2, Bottom_print, false, true);
+    sprintf(String, "CH:%u", scanChannelsCount);
+    GUI_DisplaySmallest(String, 101, Bottom_print, false, true);
+    return;
+    }
+
+if(appMode!=CHANNEL_MODE) {
     sprintf(String, "%u.%05u", SpectrumRangeStart / 100000, SpectrumRangeStart % 100000);
     GUI_DisplaySmallest(String, 2, Bottom_print, false, true);
- 
     sprintf(String, "%u.%05u", SpectrumRangeStop / 100000, SpectrumRangeStop % 100000);
     GUI_DisplaySmallest(String, 90, Bottom_print, false, true);
     }
@@ -1868,18 +1847,26 @@ static void DrawF(uint32_t f) {
     } else ArrowLine = 2;
     static char Text[20]="";
     if (LowNoise) UI_PrintStringSmallbackground("LN", 112, 127, 1, 0);
+    DrawNums();
+    if(f < 100000000) {
+        UI_PrintStringSmallBold(line1 + 7, 87, 0, 1);
+        line1[7] = 0;
+        UI_DisplayFrequency(line1, 3, 0, 1);
+    } else {
+        UI_PrintStringSmallBold(line1 + 8, 100, 0, 1);
+        line1[8] = 0;
+        UI_DisplayFrequency(line1, 3, 0, 1);
+    }
     switch(ShowLines) {
             case 1:
             case 3:
                 {           //SPECTRUM
-                DrawNums();
                 if(isListening) { sprintf(Text, "%d dBm", Rssi2DBm(scanInfo.rssi)); }
                 else { 
                     if (lastReceivingFreq >= 1400000 && lastReceivingFreq <= 130000000) {
                         snprintf(Text, sizeof(Text), "%u.%05u", lastReceivingFreq / 100000, lastReceivingFreq % 100000);
                     }
                 }
-                UI_DisplayFrequency(line1, 3, 0, 1);  
                 UI_PrintStringSmallbackground(line2, 0, 127, 2, 0);  
                 GUI_DisplaySmallest(Text, 42, Bottom_print, false, true);
                 ArrowLine = 3;
@@ -1918,7 +1905,6 @@ static void DrawF(uint32_t f) {
                 snprintf(line3, sizeof(line3), "Rate: %u/s", benchRatePerSec);
 #endif
                 }
-                UI_DisplayFrequency(line1, 3, 0, 1);
                 UI_PrintStringSmallbackground(line2, 0, 127, 2, 0);  
                 ScanProgress_DrawGaugeLine(3);
                 if(isListening) DrawMeter(4);
@@ -2067,38 +2053,6 @@ static void HandleKeyBandList(uint8_t key) {
                     bandListSelectedIndex = 0;
                 }
                 break;
-            case KEY_4: /* toggle selected band */
-                if (bandListSelectedIndex < bandCount) {
-                    settings.bandEnabled[bandListSelectedIndex] = !settings.bandEnabled[bandListSelectedIndex]; 
-                    nextBandToScanIndex = bandListSelectedIndex; 
-                    bandListSelectedIndex++;
-                }
-                break;
-            case KEY_5: /* select only this band */
-                if (bandListSelectedIndex < bandCount) {
-                    memset(settings.bandEnabled, 0, sizeof(settings.bandEnabled));
-                    settings.bandEnabled[bandListSelectedIndex] = true;
-                    nextBandToScanIndex = bandListSelectedIndex; 
-                }
-                break;
-            case KEY_MENU:
-                if (bandListSelectedIndex < bandCount) {
-                    memset(settings.bandEnabled, 0, sizeof(settings.bandEnabled));
-                    settings.bandEnabled[bandListSelectedIndex] = true;
-                    nextBandToScanIndex = bandListSelectedIndex;
-                    gForceModulation = 0; // KOLYAN ADD
-                    SetState(SPECTRUM);
-                    ResetModifiers();
-                    RelaunchScan();
-                }
-                break;
-            case KEY_EXIT:
-                    SpectrumMonitor = 0;
-                    SetState(SPECTRUM);
-                    ResetModifiers();
-                    RelaunchScan(); 
-                    gForceModulation = 0; // KOLYAN ADD
-                    break;
             case KEY_1: /* Load band preset 1 */
                     bandListSelectedIndex = 0;
                     memcpy(settings.bandEnabled, bandPresets[0], sizeof(settings.bandEnabled));
@@ -2117,13 +2071,45 @@ static void HandleKeyBandList(uint8_t key) {
                     currentBandPreset = 2;
                     ShowOSDPopup("Preset 3");
                     break;
+            case KEY_4: /* toggle selected band */
+                if (bandListSelectedIndex < bandCount) {
+                    settings.bandEnabled[bandListSelectedIndex] = !settings.bandEnabled[bandListSelectedIndex]; 
+                    nextBandToScanIndex = bandListSelectedIndex; 
+                    bandListSelectedIndex++;
+                }
+                break;
+            case KEY_5: /* select only this band */
+                if (bandListSelectedIndex < bandCount) {
+                    memset(settings.bandEnabled, 0, sizeof(settings.bandEnabled));
+                    settings.bandEnabled[bandListSelectedIndex] = true;
+                    nextBandToScanIndex = bandListSelectedIndex; 
+                }
+                break;
             case KEY_7: /* Save current bands to current preset */
                     memcpy(bandPresets[currentBandPreset], settings.bandEnabled, sizeof(settings.bandEnabled));
                     {
                         char msg[32];
-                        sprintf(msg, "Saved to Preset %d", currentBandPreset + 1);
+                        sprintf(msg, "Saved Preset %d", currentBandPreset + 1);
                         ShowOSDPopup(msg);
                     }
+                    break;
+            case KEY_MENU:
+                if (bandListSelectedIndex < bandCount) {
+                    memset(settings.bandEnabled, 0, sizeof(settings.bandEnabled));
+                    settings.bandEnabled[bandListSelectedIndex] = true;
+                    nextBandToScanIndex = bandListSelectedIndex;
+                    gForceModulation = 0; // KOLYAN ADD
+                    SetState(SPECTRUM);
+                    ResetModifiers();
+                    RelaunchScan();
+                }
+                break;
+            case KEY_EXIT:
+                    SpectrumMonitor = 0;
+                    SetState(SPECTRUM);
+                    ResetModifiers();
+                    RelaunchScan(); 
+                    gForceModulation = 0; // KOLYAN ADD
                     break;
             default:
                 break;
@@ -2192,16 +2178,7 @@ static void HandleKeyParameters(uint8_t key) {
         case KEY_3: {
             bool isKey3 = (key == KEY_3);
             uint16_t realIndex = parametersSelectedIndex;
-            if (Light_Mode) {
-                realIndex = lightModeMenuMapping[parametersSelectedIndex];
-            }
             switch (realIndex) {
-                case PARAM_RSSI_DELAY:
-                    IndexDelayRssi = isKey3 ?
-                                 (IndexDelayRssi >= 2 ? 0 : IndexDelayRssi + 1) :
-                                 (IndexDelayRssi == 0 ? 2 : IndexDelayRssi - 1);
-                    DelayRssi = DelayRssiValues[IndexDelayRssi];
-                    break;
                 case PARAM_SPECTRUM_DELAY:
                     if (isKey3) {
                           if (SpectrumDelay < 61000)
@@ -2268,10 +2245,6 @@ static void HandleKeyParameters(uint8_t key) {
                                  (AUTO_KEYLOCK <= 0 ? 3 : AUTO_KEYLOCK - 1);
                       gKeylockCountdown = durations[AUTO_KEYLOCK];
                       break;
-                case PARAM_GLITCH_MAX:
-                    if (isKey3) { if (GlitchMax < 75) GlitchMax += 5; }
-                    else        { if (GlitchMax >= 5) GlitchMax -= 5; }
-                      break;
                 case PARAM_SOUND_BOOST:
                       SoundBoost = !SoundBoost;
                       break;
@@ -2286,11 +2259,6 @@ static void HandleKeyParameters(uint8_t key) {
                 case PARAM_RESET_DEFAULT:
                       if (isKey3) ClearSettings();
                       break;
-                case PARAM_LIGHT_MODE:
-                    Light_Mode = !Light_Mode;
-                    parametersSelectedIndex = 0;
-                    parametersScrollOffset = 0;
-                    break;
             }
             break;
             }
@@ -2405,12 +2373,13 @@ static void HandleKeySpectrum(uint8_t key, KEY_Event_t event) {
         case KEY_8:
             if (historyListActive) {SaveHistory();
             } else {
-                if(event == EV_LONG_PRESS) {LowNoise = !LowNoise;break;}
+                if(event == EV_LONG_PRESS || event == EV_REPEAT) {LowNoise = !LowNoise;break;}
                 else {ShowLines++;}
                 if (ShowLines > 3 || ShowLines < 1) ShowLines = 1;
                 const char *viewName           = "SPECTRUM";
-				if (ShowLines == 2) viewName   = "SCAN";
+				if (ShowLines == 2) viewName   = "FAST SCAN";
 				if (ShowLines == 3) viewName   = "SMOOTH SPECTRUM";
+                DelayRssi = (ShowLines == 2)?750:1500;
                 ShowOSDPopup(viewName);
                 spectrumElapsedCount = 0;
             }
@@ -2728,7 +2697,7 @@ static void OnKeyDownStill(KEY_Code_t key) {
             stillRegSelected--;
           }
       break;
-      case KEY_8: // przewijanie w dół po liście rejestrów
+      case KEY_8:
           if (stillEditRegs && stillRegSelected < ARRAY_SIZE(allRegisterSpecs)-1) {
             stillRegSelected++;
           }
@@ -3100,11 +3069,9 @@ static void RenderSpectrum()
 #ifdef ENABLE_PERSIST
         uint8_t topY[128];
         BuildCurrentSpectrumTopY(topY);
-        //DrawNums();
         UpdateDBMaxAuto();
         DrawSpectrumCurve(topY);
 #else
-        //DrawNums();
         UpdateDBMaxAuto();
         if (ShowLines == 1) DrawSpectrum();
         else DrawSpectrumSmooth();
@@ -3415,7 +3382,6 @@ static void UpdateListening(void) {
     UpdateNoiseOff();
     if (!isListening) {
         UpdateNoiseOn();
-        UpdateGlitch();
     }
     spectrumElapsedCount += 200; 
     if (peak.f >= 1400000 && peak.f <= 130000000 && gNextTimeslice_HTimeS) {
@@ -3656,10 +3622,10 @@ typedef struct {
     uint8_t IndexDelayRssi;
     uint8_t PttEmission; 
     uint8_t listenBw;
-	uint32_t bandListFlags;            // Bits 0-31: bandEnabled[0..31]
-    uint32_t bandPreset1Flags;         // Band preset 1
-    uint32_t bandPreset2Flags;         // Band preset 2
-    uint32_t bandPreset3Flags;         // Band preset 3
+	uint64_t bandListFlags;            // Bits 0-63: bandEnabled[0..63]
+    uint8_t bandPreset1Flags;         // Band preset 1
+    uint8_t bandPreset2Flags;         // Band preset 2
+    uint8_t bandPreset3Flags;         // Band preset 3
     uint8_t currentBandPreset;         // Active preset (0-2)
     uint32_t scanListFlags;            // Bits 0-31: scanListEnabled[0..31]
     int16_t Trigger;
@@ -3686,12 +3652,10 @@ typedef struct {
     uint8_t Noislvl_OFF;
     uint16_t UOO_trigger;
     uint8_t osdPopupIndex;
-    uint8_t GlitchMax;  
     uint8_t Spectrum_state;  
     bool Backlight_On;
     bool SoundBoost;  
     bool gMonitorScan;
-    bool Light_Mode;
     bool LowNoise;
 } SettingsEEPROM;
 
@@ -3720,13 +3684,14 @@ void LoadSettings()
     if (eepromData.RangeStop >= 1400000)  RangeStop = eepromData.RangeStop;
     settings.scanStepIndex = eepromData.scanStepIndex;
     for (int i = 0; i < MAX_BANDS; i++) {
-      settings.bandEnabled[i] = (eepromData.bandListFlags & ((uint32_t)1 << i)) != 0;
-      }
+      settings.bandEnabled[i] = (eepromData.bandListFlags & ((uint64_t)1 << i)) != 0;
+}
+    
     // Load band presets ??
-    for (int i = 0; i < MAX_BANDS; i++) {
-      bandPresets[0][i] = (eepromData.bandPreset1Flags & ((uint32_t)1 << i)) != 0;
-      bandPresets[1][i] = (eepromData.bandPreset2Flags & ((uint32_t)1 << i)) != 0;
-      bandPresets[2][i] = (eepromData.bandPreset3Flags & ((uint32_t)1 << i)) != 0;
+    for (int i = 0; i < MAX_BANDS_PRESETS; i++) {
+      bandPresets[0][i] = (eepromData.bandPreset1Flags & ((uint8_t)1 << i)) != 0;
+      bandPresets[1][i] = (eepromData.bandPreset2Flags & ((uint8_t)1 << i)) != 0;
+      bandPresets[2][i] = (eepromData.bandPreset3Flags & ((uint8_t)1 << i)) != 0;
     }
     currentBandPreset = eepromData.currentBandPreset;
     if (currentBandPreset > 2) currentBandPreset = 0;  // ??
@@ -3747,11 +3712,9 @@ void LoadSettings()
     osdPopupIndex = eepromData.osdPopupIndex;
     osdPopupSetting = osdPopupTimes[osdPopupIndex];
     Backlight_On = eepromData.Backlight_On;
-    GlitchMax = eepromData.GlitchMax;    
     Spectrum_state = eepromData.Spectrum_state;    
     SoundBoost = eepromData.SoundBoost;
-    gMonitorScan = eepromData.gMonitorScan;    
-    Light_Mode = eepromData.Light_Mode;   
+    gMonitorScan = eepromData.gMonitorScan;   
 
     #ifdef ENABLE_SAVE_REGISTERS
         BK4819_WriteRegister(BK4819_REG_40, eepromData.R40);
@@ -3792,25 +3755,23 @@ static void SaveSettings()
     eepromData.Noislvl_OFF = Noislvl_OFF;
     eepromData.UOO_trigger = UOO_trigger;
     eepromData.osdPopupIndex = osdPopupIndex;
-    eepromData.GlitchMax  = GlitchMax;   
     eepromData.Spectrum_state = Spectrum_state;    
     eepromData.SoundBoost = SoundBoost;
     eepromData.gMonitorScan = gMonitorScan;
-    eepromData.Light_Mode = Light_Mode;
-    eepromData.bandListFlags = 0;
     for (int i = 0; i < MAX_BANDS; i++) { 
       if (settings.bandEnabled[i]) {
-          eepromData.bandListFlags |= ((uint32_t)1 << i);
+          eepromData.bandListFlags |= ((uint64_t)1 << i);
       }
     }
+
     // Save band presets ??
     eepromData.bandPreset1Flags = 0;
     eepromData.bandPreset2Flags = 0;
     eepromData.bandPreset3Flags = 0;
-    for (int i = 0; i < MAX_BANDS; i++) {
-      if (bandPresets[0][i]) eepromData.bandPreset1Flags |= ((uint32_t)1 << i);
-      if (bandPresets[1][i]) eepromData.bandPreset2Flags |= ((uint32_t)1 << i);
-      if (bandPresets[2][i]) eepromData.bandPreset3Flags |= ((uint32_t)1 << i);
+    for (int i = 0; i < MAX_BANDS_PRESETS; i++) {
+      if (bandPresets[0][i]) eepromData.bandPreset1Flags |= ((uint8_t)1 << i);
+      if (bandPresets[1][i]) eepromData.bandPreset2Flags |= ((uint8_t)1 << i);
+      if (bandPresets[2][i]) eepromData.bandPreset3Flags |= ((uint8_t)1 << i);
     }
     eepromData.currentBandPreset = currentBandPreset;
 
@@ -3874,8 +3835,8 @@ void ClearSettings()
     settings.listenBw = 0;
     RangeStart = 43000000;
     RangeStop  = 44000000;
-    DelayRssi = 1000;
-    IndexDelayRssi = 2;
+    DelayRssi = 1500;
+    IndexDelayRssi = 1;
     PttEmission = 2;
     settings.scanStepIndex = STEP_10kHz;
     ShowLines = 1;
@@ -3888,13 +3849,11 @@ void ClearSettings()
     Noislvl_OFF = NoisLvl; 
     Noislvl_ON = NoisLvl - NoiseHysteresis;  
     UOO_trigger = 5;
-    osdPopupIndex = 3;
+    osdPopupIndex = 1;
     osdPopupSetting = osdPopupTimes[osdPopupIndex];
-    GlitchMax = 0;  
     Spectrum_state = 1; 
     SoundBoost = 0;
     gMonitorScan = false;
-    Light_Mode = false;
     settings.bandEnabled[0] = 1;
     for (int i = 1; i < MAX_BANDS; i++) {settings.bandEnabled[i] = 0;}
     
@@ -4177,13 +4136,7 @@ static void GetBandRow(uint16_t index, ListRow *row) {
 static void GetParametersRow(uint16_t index, ListRow *row) {
     row->right[0] = '\0';
     uint16_t realIndex = index;
-    if (Light_Mode) {realIndex = lightModeMenuMapping[index];
-}
     switch (realIndex) {
-        case PARAM_RSSI_DELAY:
-            snprintf(row->left,  sizeof(row->left),  "RSSI Delay:");
-            snprintf(row->right, sizeof(row->right), "%sms", DelayRssiText[IndexDelayRssi]);
-            break;
         case PARAM_SPECTRUM_DELAY:
             snprintf(row->left, sizeof(row->left), "Spectrum Delay:");
             if (SpectrumDelay < 65000)
@@ -4258,10 +4211,6 @@ static void GetParametersRow(uint16_t index, ListRow *row) {
                 snprintf(row->left, sizeof(row->left), "Key Unlocked");
             }
             break;
-        case PARAM_GLITCH_MAX:
-            snprintf(row->left,  sizeof(row->left),  "GlitchMax:");
-            snprintf(row->right, sizeof(row->right), "%d", GlitchMax);
-            break;
         case PARAM_SOUND_BOOST:
             snprintf(row->left, sizeof(row->left), "SoundBoost:");
             strncpy(row->right, SoundBoost ? "ON" : "OFF", sizeof(row->right) - 1);
@@ -4312,9 +4261,6 @@ static void GetParametersRow(uint16_t index, ListRow *row) {
         case PARAM_RESET_DEFAULT:
             snprintf(row->left, sizeof(row->left), "Reset Default");
             strncpy(row->right, ">", sizeof(row->right) - 1);
-            break;
-        case PARAM_LIGHT_MODE:
-            strncpy(row->left, Light_Mode ? "Advanced Menu" : "Light Menu", sizeof(row->left) - 1);
             break;
         default:
             row->left[0] = '\0';
