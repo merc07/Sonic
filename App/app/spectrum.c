@@ -3689,9 +3689,9 @@ void LoadSettings()
     
     // Load band presets ??
     for (int i = 0; i < MAX_BANDS_PRESETS; i++) {
-      bandPresets[0][i] = (eepromData.bandPreset1Flags & ((uint8_t)1 << i)) != 0;
-      bandPresets[1][i] = (eepromData.bandPreset2Flags & ((uint8_t)1 << i)) != 0;
-      bandPresets[2][i] = (eepromData.bandPreset3Flags & ((uint8_t)1 << i)) != 0;
+      bandPresets[0][i] = (eepromData.bandPreset1Flags & ((uint64_t)1 << i)) != 0;
+      bandPresets[1][i] = (eepromData.bandPreset2Flags & ((uint64_t)1 << i)) != 0;
+      bandPresets[2][i] = (eepromData.bandPreset3Flags & ((uint64_t)1 << i)) != 0;
     }
     currentBandPreset = eepromData.currentBandPreset;
     if (currentBandPreset > 2) currentBandPreset = 0;  // ??
@@ -3769,9 +3769,9 @@ static void SaveSettings()
     eepromData.bandPreset2Flags = 0;
     eepromData.bandPreset3Flags = 0;
     for (int i = 0; i < MAX_BANDS_PRESETS; i++) {
-      if (bandPresets[0][i]) eepromData.bandPreset1Flags |= ((uint8_t)1 << i);
-      if (bandPresets[1][i]) eepromData.bandPreset2Flags |= ((uint8_t)1 << i);
-      if (bandPresets[2][i]) eepromData.bandPreset3Flags |= ((uint8_t)1 << i);
+      if (bandPresets[0][i]) eepromData.bandPreset1Flags |= ((uint64_t)1 << i);
+      if (bandPresets[1][i]) eepromData.bandPreset2Flags |= ((uint64_t)1 << i);
+      if (bandPresets[2][i]) eepromData.bandPreset3Flags |= ((uint64_t)1 << i);
     }
     eepromData.currentBandPreset = currentBandPreset;
 
