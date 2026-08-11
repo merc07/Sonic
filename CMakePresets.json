@@ -16,7 +16,7 @@
                 "ENABLE_SAVE_REGISTERS": false,
                 "ENABLE_ADVANCED_SPECTRUM":false,
                 "ENABLE_PERSIST": false,
-                "ENABLE_BENCH": true,
+                "ENABLE_BENCH": false,
                 "ENABLE_VERSION": false,
                 "ENABLE_ALARM": false,
                 "ENABLE_FLASHLIGHT": true,
@@ -63,8 +63,8 @@
                 "ENABLE_AGC_SHOW_DATA": false,
                 "ENABLE_UART_RW_BK_REGS": false,
                 "ENABLE_SWD": false,
-                "VERSION_STRING_1": "V44",
-                "VERSION_STRING_2": "V44" 
+                "VERSION_STRING_1": "V45",
+                "VERSION_STRING_2": "V45" 
             }
         },
        
@@ -73,14 +73,14 @@
         "ENABLE_USB": true,
         //"ENABLE_UART": true,
         "EDITION_STRING": "USB",
-        "TARGET": "SONIC.USB.V44"
+        "TARGET": "SONIC.USB.V45"
     }
 },
 {
     "name": "RS232","inherits": "default","cacheVariables": {
         "ENABLE_UART": true,
         "EDITION_STRING": "RS232",
-        "TARGET": "SONIC.RS232.V44"
+        "TARGET": "SONIC.RS232.V45"
     }
 }
 ],

@@ -70,7 +70,7 @@ build_preset() {
        | sed -E '/^[[:space:]]+[A-Za-z0-9_]+(:[A-Za-z]+)?=/d; /--( Configuring|Generating) done/d; /-- Build files have been written to/d'
 
   docker run --rm -v "$PWD":/src -w /src "$IMAGE" \
-    arm-none-eabi-size ./build/${preset}/SONIC.${preset}.V44.elf
+    arm-none-eabi-size ./build/${preset}/SONIC.${preset}.V45.elf
 
   echo "✅ Done: ${preset}"
 }
@@ -80,7 +80,7 @@ build_preset() {
 # ---------------------------------------------
 flash_preset() {
   local preset="$1"
-  local ifile="./build/${preset}/SONIC.${preset}.V44.bin"
+  local ifile="./build/${preset}/SONIC.${preset}.V45.bin"
 
   echo -e "\n⚡ Flashing ${preset} firmware on COM14..."
 
