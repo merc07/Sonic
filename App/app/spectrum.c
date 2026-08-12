@@ -254,7 +254,9 @@ SpectrumSettings settings = {stepsCount: STEPS_128,
                             };
 
 // 3 Band presets
-static bool bandPresets[3][MAX_BANDS_PRESETS] = {{0}, {0}, {0}};
+uint64_t bandPreset1Flags = 0;
+uint64_t bandPreset2Flags = 0;
+uint64_t bandPreset3Flags = 0;
 static uint8_t currentBandPreset = 0;  // 0-2 for presets 1-3
 
 static uint32_t currentFreq, tempFreq;
@@ -2055,19 +2057,25 @@ static void HandleKeyBandList(uint8_t key) {
                 break;
             case KEY_1: /* Load band preset 1 */
                     bandListSelectedIndex = 0;
-                    memcpy(settings.bandEnabled, bandPresets[0], sizeof(settings.bandEnabled));
+                    for (int i = 0; i < MAX_BANDS; i++) {
+                        settings.bandEnabled[i] = (bandPreset1Flags & ((uint64_t)1 << i)) != 0;
+                    }
                     currentBandPreset = 0;
-                   // ShowOSDPopup("Preset 1");
+                    //ShowOSDPopup("Preset 1");
                     break;
             case KEY_2: /* Load band preset 2 */
-                    bandListSelectedIndex = 0;        
-                    memcpy(settings.bandEnabled, bandPresets[1], sizeof(settings.bandEnabled));
+                    bandListSelectedIndex = 0;
+                    for (int i = 0; i < MAX_BANDS; i++) {
+                        settings.bandEnabled[i] = (bandPreset2Flags & ((uint64_t)1 << i)) != 0;
+                    }
                     currentBandPreset = 1;
                     //ShowOSDPopup("Preset 2");
                     break;
             case KEY_3: /* Load band preset 3 */
-                    bandListSelectedIndex = 0;        
-                    memcpy(settings.bandEnabled, bandPresets[2], sizeof(settings.bandEnabled));
+                   bandListSelectedIndex = 0;
+                    for (int i = 0; i < MAX_BANDS; i++) {
+                        settings.bandEnabled[i] = (bandPreset3Flags & ((uint64_t)1 << i)) != 0;
+                    }
                     currentBandPreset = 2;
                     //ShowOSDPopup("Preset 3");
                     break;
@@ -2085,14 +2093,23 @@ static void HandleKeyBandList(uint8_t key) {
                     nextBandToScanIndex = bandListSelectedIndex; 
                 }
                 break;
-            case KEY_7: /* Save current bands to current preset */
-                    memcpy(bandPresets[currentBandPreset], settings.bandEnabled, sizeof(settings.bandEnabled));
-                    {
-                        char msg[32];
-                        sprintf(msg, "Saved Preset %d", currentBandPreset + 1);
-                        ShowOSDPopup(msg);
-                    }
-                    break;
+            case KEY_7:
+                {
+                uint64_t newFlags = 0;
+                for (int i = 0; i < MAX_BANDS; i++) {
+                    if (settings.bandEnabled[i]) newFlags |= ((uint64_t)1 << i);
+                }
+                switch (currentBandPreset) {
+                    case 0: bandPreset1Flags = newFlags; break;
+                    case 1: bandPreset2Flags = newFlags; break;
+                    case 2: bandPreset3Flags = newFlags; break;
+                }
+                SaveSettings();
+                char msg[32];
+                sprintf(msg, "Saved Preset %d", currentBandPreset + 1);
+                ShowOSDPopup(msg);
+    }
+    break;
             case KEY_MENU:
                 if (bandListSelectedIndex < bandCount) {
                     memset(settings.bandEnabled, 0, sizeof(settings.bandEnabled));
@@ -3622,7 +3639,7 @@ typedef struct {
     uint8_t IndexDelayRssi;
     uint8_t PttEmission; 
     uint8_t listenBw;
-	//uint64_t bandListFlags;            // Bits 0-63: bandEnabled[0..63]
+	uint64_t bandListFlags;            // Bits 0-63: bandEnabled[0..63]
     uint64_t bandPreset1Flags;         // Band preset 1
     uint64_t bandPreset2Flags;         // Band preset 2
     uint64_t bandPreset3Flags;         // Band preset 3
@@ -3683,23 +3700,17 @@ void LoadSettings()
     if (eepromData.RangeStart >= 1400000) RangeStart = eepromData.RangeStart;
     if (eepromData.RangeStop >= 1400000)  RangeStop = eepromData.RangeStop;
     settings.scanStepIndex = eepromData.scanStepIndex;
-    //for (int i = 0; i < MAX_BANDS; i++) {
-    //  settings.bandEnabled[i] = (eepromData.bandListFlags & ((uint64_t)1 << i)) != 0;
-    //}
-    
-    // Load band presets ??
-    for (int i = 0; i < MAX_BANDS_PRESETS; i++) {
-      bandPresets[0][i] = (eepromData.bandPreset1Flags & ((uint64_t)1 << i)) != 0;
-      bandPresets[1][i] = (eepromData.bandPreset2Flags & ((uint64_t)1 << i)) != 0;
-      bandPresets[2][i] = (eepromData.bandPreset3Flags & ((uint64_t)1 << i)) != 0;
-    }
-    currentBandPreset = eepromData.currentBandPreset;
-    if (currentBandPreset > 2) currentBandPreset = 0;  // ??
-    // Restore live bandEnabled from whichever preset was active last
+   
     for (int i = 0; i < MAX_BANDS; i++) {
-        settings.bandEnabled[i] = bandPresets[currentBandPreset][i];
+      settings.bandEnabled[i] = (eepromData.bandListFlags & ((uint64_t)1 << i)) != 0;
     }
-
+    
+    bandPreset1Flags = eepromData.bandPreset1Flags;
+    bandPreset2Flags = eepromData.bandPreset2Flags;
+    bandPreset3Flags = eepromData.bandPreset3Flags;
+    currentBandPreset = eepromData.currentBandPreset;
+    if (currentBandPreset > 2) currentBandPreset = 0;
+    
     IndexDelayRssi = eepromData.IndexDelayRssi;
     DelayRssi = DelayRssiValues[eepromData.IndexDelayRssi];
     PttEmission = eepromData.PttEmission;
@@ -3764,21 +3775,15 @@ static void SaveSettings()
     eepromData.SoundBoost = SoundBoost;
     eepromData.gMonitorScan = gMonitorScan;
   
-    // for (int i = 0; i < MAX_BANDS; i++) { 
-   //   if (settings.bandEnabled[i]) {
-   //       eepromData.bandListFlags |= ((uint64_t)1 << i);
-   //   }
-   // }
-
-    // Save band presets 
-    eepromData.bandPreset1Flags = 0;
-    eepromData.bandPreset2Flags = 0;
-    eepromData.bandPreset3Flags = 0;
-    for (int i = 0; i < MAX_BANDS_PRESETS; i++) {
-      if (bandPresets[0][i]) eepromData.bandPreset1Flags |= ((uint64_t)1 << i);
-      if (bandPresets[1][i]) eepromData.bandPreset2Flags |= ((uint64_t)1 << i);
-      if (bandPresets[2][i]) eepromData.bandPreset3Flags |= ((uint64_t)1 << i);
+     for (int i = 0; i < MAX_BANDS; i++) { 
+      if (settings.bandEnabled[i]) {
+          eepromData.bandListFlags |= ((uint64_t)1 << i);
+      }
     }
+
+    eepromData.bandPreset1Flags = bandPreset1Flags;
+    eepromData.bandPreset2Flags = bandPreset2Flags;
+    eepromData.bandPreset3Flags = bandPreset3Flags;
     eepromData.currentBandPreset = currentBandPreset;
 
     #ifdef ENABLE_SAVE_REGISTERS

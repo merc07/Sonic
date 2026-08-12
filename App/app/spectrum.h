@@ -166,7 +166,6 @@ typedef struct bandparameters {
 } bandparameters;
 
 #define MAX_BANDS 50
-#define MAX_BANDS_PRESETS 50
 
 typedef struct SpectrumSettings {
   uint32_t frequencyChangeStep;  
