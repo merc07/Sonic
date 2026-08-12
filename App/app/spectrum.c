@@ -3692,7 +3692,7 @@ void LoadSettings()
     }
     
     currentBandPreset = eepromData.currentBandPreset;
-    if (currentBandPreset > 2) currentBandPreset = 0;
+    if (currentBandPreset >= MAX_BAND_PRESETS) currentBandPreset = 0;
     
     IndexDelayRssi = eepromData.IndexDelayRssi;
     DelayRssi = DelayRssiValues[eepromData.IndexDelayRssi];
