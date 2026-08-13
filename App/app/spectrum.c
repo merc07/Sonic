@@ -255,7 +255,7 @@ SpectrumSettings settings = {stepsCount: STEPS_128,
 
 // Band presets
 uint64_t bandPresetFlags[MAX_BAND_PRESETS] = {0};
-static uint8_t currentBandPreset = 0;  // 0-2 for presets 1-3
+static uint8_t currentBandPreset = 0;  // 
 
 static uint32_t currentFreq, tempFreq;
 static uint8_t rssiHistory[128];
@@ -506,7 +506,7 @@ static void LoadActiveScanFrequencies(void)
     }
     char str[32];
     if(appMode == CHANNEL_MODE) {sprintf(str, "CHANNELS:%d", needed);}
-    if(appMode == SCAN_BAND_MODE) {sprintf(str, "BANDS:%d",CountActiveBands());}
+    if(appMode == SCAN_BAND_MODE) {sprintf(str, "P%d BANDS:%d ", currentBandPreset + 1, CountActiveBands());}
     if(appMode == FREQUENCY_MODE) {sprintf(str, "FREQUENCY");}
     if(appMode == SCAN_RANGE_MODE) {sprintf(str, "RANGE");}
     if (!gComeBack) ShowOSDPopup(str);
@@ -2031,11 +2031,27 @@ static const uint8_t durations[] = {0, 20, 40, 60};
 static void SwitchToPreset(uint8_t newPreset) {
     currentBandPreset = newPreset;
     bandListSelectedIndex = 0;
-    for (int i = 0; i < MAX_BANDS; i++) {
+    for (uint8_t i = 0; i < MAX_BANDS; i++) {
         settings.bandEnabled[i] = (bandPresetFlags[currentBandPreset] & ((uint64_t)1 << i)) != 0;
     }
 }
 
+uint8_t GetBandIndexForRow(uint8_t row) {
+    uint8_t pos = 0;
+    for (uint8_t i = 0; i < bandCount; i++) {
+        if (settings.bandEnabled[i]) {
+            if (pos == row) return i;
+            pos++;
+        }
+    }
+    for (uint8_t i = 0; i < bandCount; i++) {
+        if (!settings.bandEnabled[i]) {
+            if (pos == row) return i;
+            pos++;
+        }
+    }
+    return 0;
+}
 // ============================================================
 // SECTION: Per-state keyboard handlers
 // ============================================================
@@ -2068,9 +2084,10 @@ static void HandleKeyBandList(uint8_t key) {
                     SwitchToPreset((currentBandPreset == MAX_BAND_PRESETS - 1) ? 0 : (currentBandPreset + 1));
                     break;
             case KEY_4: /* toggle selected band */
-                if (bandListSelectedIndex < bandCount) {
-                    settings.bandEnabled[bandListSelectedIndex] = !settings.bandEnabled[bandListSelectedIndex]; 
-                    nextBandToScanIndex = bandListSelectedIndex; 
+                    if (bandListSelectedIndex < bandCount) {
+                    uint8_t bandIndex = GetBandIndexForRow(bandListSelectedIndex);
+                    settings.bandEnabled[bandIndex] = !settings.bandEnabled[bandIndex];
+                    nextBandToScanIndex = bandIndex;
                     bandListSelectedIndex++;
                 }
                 break;
@@ -2084,7 +2101,7 @@ static void HandleKeyBandList(uint8_t key) {
             case KEY_7:
                 {
                 uint64_t newFlags = 0;
-                for (int i = 0; i < MAX_BANDS; i++) {
+                for (uint8_t i = 0; i < MAX_BANDS; i++) {
                     if (settings.bandEnabled[i]) newFlags |= ((uint64_t)1 << i);
                 }
                     bandPresetFlags[currentBandPreset] = newFlags;
@@ -3625,7 +3642,7 @@ typedef struct {
     uint8_t listenBw;
 	uint64_t bandListFlags;            // Bits 0-63: bandEnabled[0..63]
     uint64_t bandPresetFlags[MAX_BAND_PRESETS];
-    uint8_t currentBandPreset;         // Active preset (0-2)
+    uint8_t currentBandPreset;         // Active preset
     uint32_t scanListFlags;            // Bits 0-31: scanListEnabled[0..31]
     int16_t Trigger;
     uint32_t RangeStart;
@@ -3687,7 +3704,7 @@ void LoadSettings()
       settings.bandEnabled[i] = (eepromData.bandListFlags & ((uint64_t)1 << i)) != 0;
     }
     
-    for (int i = 0; i < MAX_BAND_PRESETS; i++) {
+    for (uint8_t i = 0; i < MAX_BAND_PRESETS; i++) {
         bandPresetFlags[i] = eepromData.bandPresetFlags[i];
     }
     
@@ -3764,7 +3781,7 @@ static void SaveSettings()
       }
     }
 
-    for (int i = 0; i < MAX_BAND_PRESETS; i++) {
+    for (uint8_t i = 0; i < MAX_BAND_PRESETS; i++) {
         eepromData.bandPresetFlags[i] = bandPresetFlags[i];
     }
     eepromData.currentBandPreset = currentBandPreset;
@@ -3849,7 +3866,7 @@ void ClearSettings()
     SoundBoost = 0;
     gMonitorScan = false;
     settings.bandEnabled[0] = 1;
-    for (int i = 1; i < MAX_BANDS; i++) {settings.bandEnabled[i] = 0;}
+    for (uint8_t i = 1; i < MAX_BANDS; i++) {settings.bandEnabled[i] = 0;}
     
     #ifdef ENABLE_SAVE_REGISTERS
         BK4819_WriteRegister(BK4819_REG_10, 0x0145);
@@ -4122,9 +4139,10 @@ static void GetScanListRow(uint16_t displayIndex, ListRow *row) {
 }
 
 static void GetBandRow(uint16_t index, ListRow *row) {
-    snprintf(row->left, sizeof(row->left), "%d:%s", index + 1, BParams[index].BandName);
-    if (settings.bandEnabled[index]) { snprintf(row->right, sizeof(row->right), "<====");}
-    else                               row->right[0] = '\0';
+    uint8_t bandIndex = GetBandIndexForRow((uint8_t)index);
+    snprintf(row->left, sizeof(row->left), "%d:%s", bandIndex + 1, BParams[bandIndex].BandName);
+    if (settings.bandEnabled[bandIndex]) { snprintf(row->right, sizeof(row->right), "<====");}
+    else                                   row->right[0] = '\0';
 }
 
 static void GetParametersRow(uint16_t index, ListRow *row) {
