@@ -49,6 +49,7 @@ enum
     MENU_ABR_MAX,
     MENU_TDR,
     MENU_AUTOLK,
+    MENU_LIST_CH,
     MENU_STE,
     MENU_RP_STE,
     MENU_MIC,

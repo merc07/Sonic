@@ -209,11 +209,15 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             *pMax = 9;
             break;
 
+        case MENU_LIST_CH:
+            //*pMin = 0;
+            *pMax = MR_CHANNELS_LIST + 1;
+            break;
+
         case MENU_BAT_TXT:
             //*pMin = 0;
             *pMax = ARRAY_SIZE(gSubMenu_BAT_TXT) - 1;
             break;
-
 
         #ifdef ENABLE_F_CAL_MENU
             case MENU_F_CALI:
@@ -460,6 +464,13 @@ void MENU_AcceptSetting(void)
             gEeprom.AUTO_KEYPAD_LOCK = gSubMenuSelection;
             gKeyLockCountdown        = gEeprom.AUTO_KEYPAD_LOCK * 30; // 15 seconds step
             break;
+
+        case MENU_LIST_CH:
+            gTxVfo->SCANLIST_PARTICIPATION = gSubMenuSelection;
+            SETTINGS_UpdateChannel(gTxVfo->CHANNEL_SAVE, gTxVfo, true, true, true);
+            gVfoConfigureMode = VFO_CONFIGURE;
+            gFlagResetVfos    = true;
+            return;
 
         case MENU_STE:
             gEeprom.TAIL_TONE_ELIMINATION = gSubMenuSelection;
@@ -738,6 +749,10 @@ void MENU_ShowCurrentSetting(void)
 
         case MENU_AUTOLK:
             gSubMenuSelection = gEeprom.AUTO_KEYPAD_LOCK;
+            break;
+
+        case MENU_LIST_CH:
+            gSubMenuSelection = gTxVfo->SCANLIST_PARTICIPATION;
             break;
 
         case MENU_STE:

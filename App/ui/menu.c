@@ -61,6 +61,7 @@ const t_menu_item MenuList[] =
     {"Roger",       MENU_ROGER         },
     {"STE",         MENU_STE           },
     {"RP STE",      MENU_RP_STE        },
+    {"ChList",      MENU_LIST_CH       },
     {"ChSave",      MENU_MEM_CH        },
     {"ChDele",      MENU_DEL_CH        },
     {"ChName",      MENU_MEM_NAME      },
@@ -306,11 +307,8 @@ void UI_DisplayMenu(void)
     const unsigned int menu_item_x2    = LCD_WIDTH - 1;
     unsigned int       i;
     char               String[64];  // bigger cuz we can now do multi-line in one string (use '\n' char)
-
-
+    const int m = UI_MENU_GetCurrentMenuId();
     UI_DisplayClear();
-
-
 
 #ifndef ENABLE_CUSTOM_MENU_LAYOUT
         // original menu layout
@@ -648,6 +646,22 @@ void UI_DisplayMenu(void)
 
         case MENU_RP_STE:
             sprintf(String, gSubMenuSelection == 0 ? gSubMenu_OFF_ON[0] : "%u*100ms", gSubMenuSelection);
+            break;
+
+        case MENU_LIST_CH:
+            if (gSubMenuSelection == MR_CHANNELS_LIST + 1)
+                strcpy(String, "ALL");
+            else if (gSubMenuSelection == 0 && m == MENU_LIST_CH)
+                strcpy(String, "OFF");
+            else {
+                const char *name = gListName[gSubMenuSelection - 1];
+                
+                // If first character is empty/invalid, display "N/A"
+                if (IsEmptyName(name, sizeof(gListName[0])))
+                    sprintf(String, "%02u", gSubMenuSelection);
+                else
+                    sprintf(String, "%02u (%.3s)", gSubMenuSelection, name);
+            }
             break;
 
         case MENU_BAT_TXT:
